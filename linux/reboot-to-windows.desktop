@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Reboot to Windows
+Name[vi]=Khởi động lại vào Windows
+Comment=Restart this PC straight into Windows (one time)
+Comment[vi]=Khởi động lại và vào thẳng Windows (một lần)
+Exec=__BIN__
+Icon=system-reboot
+Terminal=false
+Categories=System;Utility;
