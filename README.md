@@ -18,6 +18,24 @@ Both set the UEFI firmware's **one-time** boot target and then reboot. Your perm
 
 Both are the standard, reversible UEFI mechanisms — no partition or bootloader is modified.
 
+### Portable — works on any PC
+
+Nothing is hard-coded (no fixed disk or boot-entry number). The target entry is **auto-detected at run time**:
+
+* **Windows** is found by the universal `BOOTMGFW.EFI` boot path — reliable on every Windows install.
+* **Linux** is found by its firmware entry name (`ubuntu`, `debian`, `fedora`, `arch`, `mint`, …) or by a GRUB/shim boot path (`grubx64.efi` / `shimx64.efi`).
+
+If auto-detection picks the wrong entry (or your distro isn't recognized), force it:
+
+```sh
+# Linux → Windows
+reboot-to-windows.sh "Windows"      # or a boot-entry number like 0006
+```
+```powershell
+# Windows → Linux
+reboot-to-linux.ps1 -Match fedora   # any name substring, or a {GUID}
+```
+
 ## Requirements
 
 * A **UEFI** system with both OSes installed (not legacy BIOS).
@@ -75,6 +93,24 @@ Cả hai chỉ đặt mục tiêu boot **một lần** của firmware UEFI rồi
 * **Windows** dùng `bcdedit /set {fwbootmgr} bootsequence <guid>` để boot một lần vào mục firmware *Ubuntu*.
 
 Đều là cơ chế UEFI chuẩn, có thể đảo ngược — không sửa phân vùng hay bootloader nào.
+
+### Dùng được cho mọi máy (tự dò)
+
+Không hard-code gì cả (không cố định ổ hay số boot entry). Entry đích được **tự dò lúc chạy**:
+
+* **Windows** dò qua đường dẫn chuẩn `BOOTMGFW.EFI` — máy Windows nào cũng đúng.
+* **Linux** dò qua tên entry firmware (`ubuntu`, `debian`, `fedora`, `arch`, `mint`, …) hoặc đường dẫn GRUB/shim (`grubx64.efi` / `shimx64.efi`).
+
+Nếu dò nhầm (hoặc distro của bạn chưa được nhận), ép thủ công:
+
+```sh
+# Linux → Windows
+reboot-to-windows.sh "Windows"      # hoặc số entry như 0006
+```
+```powershell
+# Windows → Linux
+reboot-to-linux.ps1 -Match fedora   # tên bất kỳ, hoặc {GUID}
+```
 
 ## Yêu cầu
 
