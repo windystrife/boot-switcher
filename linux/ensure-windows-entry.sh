@@ -42,26 +42,23 @@ log "Windows ESP: $winpart (disk $disk, part $partnum)"
 efibootmgr -c -d "$disk" -p "$partnum" -L "$LABEL" -l "$LOADER" >/dev/null 2>&1 || {
     log "efibootmgr -c failed"; exit 0; }
 
-# 3) Identify the freshly-created Windows entry (the newest one).
+# 3) Keep the newest Windows entry; delete ONLY older duplicate Windows entries.
+#    (Do NOT delete the Linux entries — mass deletion makes this firmware rebuild
+#    its whole boot list at the next POST and drop the Windows entry. A freshly
+#    created Windows entry, added without deleting the others, is what actually
+#    shows up in the BIOS menu on these Huananzhi boards.)
 mapfile -t wins < <(efibootmgr -v | grep -i "$LABEL" | grep -i bootmgfw | sed -E 's/^Boot([0-9A-Fa-f]{4}).*/\1/')
 [ "${#wins[@]}" -ge 1 ] || { log "no Windows entry after create (?)"; exit 0; }
 keep_win="${wins[-1]}"
+for b in "${wins[@]}"; do
+    [ "$b" != "$keep_win" ] && efibootmgr -b "$b" -B >/dev/null 2>&1 || true
+done
 
-# 4) Reduce the boot menu to exactly TWO entries: the Linux entry we booted from
-#    + this Windows entry. Delete everything else (duplicate Ubuntu/grub/fallback
-#    entries). This is safe: both bootloaders live on disk, so the firmware will
-#    just regenerate any entries it wants on the next POST.
+# 4) Put the Linux entry we booted from first, the fresh Windows entry second,
+#    and keep all the other entries after them.
 cur=$(efibootmgr | sed -n 's/^BootCurrent: //p')
-if [ -n "$cur" ] && [ "$cur" != "$keep_win" ] && efibootmgr | grep -q "^Boot${cur}\b"; then
-    for b in $(efibootmgr | grep -oE '^Boot[0-9A-Fa-f]{4}' | sed 's/^Boot//'); do
-        if [ "$b" != "$cur" ] && [ "$b" != "$keep_win" ]; then
-            efibootmgr -b "$b" -B >/dev/null 2>&1 || true
-        fi
-    done
-    efibootmgr -o "${cur},${keep_win}" >/dev/null 2>&1 || true
-    log "pruned to 2 entries: Boot$cur (Linux) + Boot$keep_win (Windows); order = $(efibootmgr | sed -n 's/^BootOrder: //p')"
-else
-    # Fallback: BootCurrent unusable — at least dedupe Windows, keep order sane.
-    for b in "${wins[@]}"; do [ "$b" != "$keep_win" ] && efibootmgr -b "$b" -B >/dev/null 2>&1 || true; done
-    log "BootCurrent unusable ($cur); kept Windows Boot$keep_win, order = $(efibootmgr | sed -n 's/^BootOrder: //p')"
+rest=$(efibootmgr | sed -n 's/^BootOrder: //p' | tr ',' '\n' | grep -vx "$cur" | grep -vx "$keep_win" | paste -sd,)
+if [ -n "$cur" ]; then
+    efibootmgr -o "${cur},${keep_win}${rest:+,$rest}" >/dev/null 2>&1 || true
 fi
+log "refreshed Boot$keep_win ($LABEL); order = $(efibootmgr | sed -n 's/^BootOrder: //p')"
