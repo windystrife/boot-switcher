@@ -73,6 +73,15 @@ Copy the `windows/` folder somewhere handy. It contains two launchers:
 
 Double-click one (it self-elevates, confirms, and reboots), or right-click the matching `.ps1` → *Run with PowerShell*. To pin: right-click a `.cmd` → *Create shortcut* → drag it to the Desktop or Start.
 
+## Auto-register (flaky firmware)
+
+Some boards (e.g. Huananzhi X99) rewrite the UEFI boot list on every boot and drop/hide the Windows entry, so it vanishes from the BIOS menu. Optional helpers re-assert it automatically:
+
+* **Linux:** `cd linux && ./install-autoregister.sh` — installs a systemd service (`ensure-windows-entry.service`) that, on every boot, recreates a fresh **Windows Boot Manager** UEFI entry pointing at the Windows ESP and keeps Linux first / Windows second. The Windows ESP is auto-detected (the partition holding `\EFI\Microsoft\Boot\bootmgfw.efi`), so it's machine-independent.
+* **Windows:** run `windows\install-autoregister.ps1` (as admin) — creates a startup scheduled task that runs `bcdedit /set {fwbootmgr} displayorder {bootmgr} /addlast`, re-adding Windows Boot Manager to the firmware boot menu at each boot (added last, so it never becomes the default).
+
+Install both so the entry gets refreshed no matter which OS you boot. Windows still boots independently from its own drive — these only touch UEFI boot variables.
+
 ## Safety notes
 
 * Only the **next** boot is affected; the permanent boot order is untouched.
@@ -152,6 +161,15 @@ Chép thư mục `windows/` ra chỗ tiện. Trong đó có hai launcher:
 * **`Reboot to Windows.cmd`** — restart về lại Windows
 
 Nhấp đúp một cái (nó tự nâng quyền, hỏi xác nhận, rồi reboot), hoặc chuột phải `.ps1` tương ứng → *Run with PowerShell*. Muốn ghim: chuột phải `.cmd` → *Create shortcut* → kéo ra Desktop hoặc Start.
+
+## Tự đăng ký lại (main hay quên entry)
+
+Một số main (vd Huananzhi X99) tự viết lại danh sách boot UEFI mỗi lần khởi động, làm rớt/giấu entry Windows → BIOS không thấy nữa. Có 2 helper tự đăng ký lại:
+
+* **Linux:** `cd linux && ./install-autoregister.sh` — cài systemd service (`ensure-windows-entry.service`), mỗi lần boot tự tạo lại entry **Windows Boot Manager** tươi mới trỏ vào ESP Windows, giữ Linux đầu / Windows thứ 2. ESP Windows được tự dò (phân vùng chứa `\EFI\Microsoft\Boot\bootmgfw.efi`) nên chạy mọi máy.
+* **Windows:** chạy `windows\install-autoregister.ps1` (quyền admin) — tạo scheduled task lúc khởi động, chạy `bcdedit /set {fwbootmgr} displayorder {bootmgr} /addlast`, đưa Windows Boot Manager vào menu boot firmware mỗi lần bật (thêm ở cuối nên không thành mặc định).
+
+Cài cả 2 để dù boot OS nào entry cũng được làm mới. Windows vẫn boot độc lập từ ổ của nó — mấy cái này chỉ đụng biến boot UEFI.
 
 ## Lưu ý an toàn
 

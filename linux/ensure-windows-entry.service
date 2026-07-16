@@ -1,0 +1,12 @@
+[Unit]
+Description=Ensure a Windows Boot Manager UEFI entry exists (flaky-firmware helper)
+Documentation=https://github.com/windystrife/boot-switcher
+After=local-fs.target
+ConditionPathExists=/sys/firmware/efi
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ensure-windows-entry.sh
+
+[Install]
+WantedBy=multi-user.target
