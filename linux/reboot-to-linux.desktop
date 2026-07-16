@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Reboot to Linux
+Name[vi]=Khởi động lại vào Linux
+Comment=Restart this PC back into Linux (the current OS)
+Comment[vi]=Khởi động lại và vào lại Linux (HĐH hiện tại)
+Exec=__BIN__
+Icon=system-reboot
+Terminal=false
+Categories=System;Utility;

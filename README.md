@@ -1,11 +1,15 @@
 # 🔁 boot-switcher
 
-Tiny one-click helpers to reboot a UEFI dual-boot PC straight into "the other OS".
+Tiny one-click helpers to reboot a UEFI dual-boot PC into the OS you want.
 
-* On **Linux** → **Reboot to Windows**
-* On **Windows** → **Reboot to Linux**
+Each OS gets **two** launchers:
 
-Both set the UEFI firmware's **one-time** boot target and then reboot. Your permanent boot order is never changed — only the *next* boot is redirected, so everything goes back to normal afterwards.
+* **Reboot to Windows** — make the next boot go into Windows
+* **Reboot to Linux** — make the next boot go into Linux
+
+Use the *other-OS* one to switch over, or the *same-OS* one to simply restart without changing which OS you land in (handy when the machine's default boot order points at the other one).
+
+All of them set the UEFI firmware's **one-time** boot target and then reboot. Your permanent boot order is never changed — only the *next* boot is redirected, so everything goes back to normal afterwards.
 
 > 🇻🇳 **Tiếng Việt bên dưới** — [nhảy tới](#-tiếng-việt)
 
@@ -50,7 +54,7 @@ cd linux
 ./install.sh
 ```
 
-This puts a **"Reboot to Windows"** icon on your desktop and in the applications menu. Double-click it, confirm, and the PC restarts into Windows.
+This puts **"Reboot to Windows"** and **"Reboot to Linux"** icons on your desktop and in the applications menu. Double-click one, confirm, and the PC reboots into that OS.
 
 > Setting `BootNext` needs `sudo`. It runs without a prompt only if passwordless sudo is enabled for `efibootmgr`; otherwise launch it once from a terminal to type your password.
 
@@ -62,12 +66,12 @@ sudo ./reboot-to-windows.sh     # or ~/.local/bin/reboot-to-windows after instal
 
 ## Windows — install
 
-Copy the `windows/` folder somewhere handy, then either:
+Copy the `windows/` folder somewhere handy. It contains two launchers:
 
-* double-click **`Reboot to Linux.cmd`**, or
-* right-click **`reboot-to-linux.ps1`** → *Run with PowerShell*.
+* **`Reboot to Linux.cmd`** — reboot into Linux
+* **`Reboot to Windows.cmd`** — restart back into Windows
 
-It self-elevates, finds the Ubuntu firmware entry, asks for confirmation, and reboots into Linux. To pin it: right-click `Reboot to Linux.cmd` → *Create shortcut* → drag the shortcut to the Desktop or Start.
+Double-click one (it self-elevates, confirms, and reboots), or right-click the matching `.ps1` → *Run with PowerShell*. To pin: right-click a `.cmd` → *Create shortcut* → drag it to the Desktop or Start.
 
 ## Safety notes
 
@@ -80,12 +84,16 @@ It self-elevates, finds the Ubuntu firmware entry, asks for confirmation, and re
 <a id="-tiếng-việt"></a>
 # 🇻🇳 Tiếng Việt
 
-Bộ công cụ một-cú-nhấp để khởi động lại máy dual-boot UEFI vào thẳng "hệ điều hành còn lại".
+Bộ công cụ một-cú-nhấp để khởi động lại máy dual-boot UEFI vào đúng HĐH bạn muốn.
 
-* Trên **Linux** → **Khởi động lại vào Windows**
-* Trên **Windows** → **Khởi động lại vào Linux**
+Mỗi HĐH có **hai** nút:
 
-Cả hai chỉ đặt mục tiêu boot **một lần** của firmware UEFI rồi khởi động lại. Thứ tự boot vĩnh viễn **không** bị đổi — chỉ lần boot *kế tiếp* được chuyển hướng, sau đó mọi thứ trở lại bình thường.
+* **Reboot to Windows** — lần boot kế tiếp vào Windows
+* **Reboot to Linux** — lần boot kế tiếp vào Linux
+
+Dùng nút *HĐH-còn-lại* để chuyển qua, hoặc nút *cùng-HĐH* để chỉ restart mà vẫn ở nguyên HĐH đang dùng (tiện khi thứ tự boot mặc định trỏ sang cái kia).
+
+Tất cả chỉ đặt mục tiêu boot **một lần** của firmware UEFI rồi khởi động lại. Thứ tự boot vĩnh viễn **không** bị đổi — chỉ lần boot *kế tiếp* được chuyển hướng, sau đó mọi thứ trở lại bình thường.
 
 ## Cơ chế
 
@@ -126,7 +134,7 @@ cd linux
 ./install.sh
 ```
 
-Lệnh này tạo icon **"Reboot to Windows"** ra desktop và menu ứng dụng. Nhấp đúp, xác nhận, máy khởi động lại vào Windows.
+Lệnh này tạo icon **"Reboot to Windows"** và **"Reboot to Linux"** ra desktop và menu ứng dụng. Nhấp đúp một cái, xác nhận, máy khởi động lại vào HĐH đó.
 
 > Đặt `BootNext` cần `sudo`. Chỉ chạy không hỏi mật khẩu nếu đã bật passwordless sudo cho `efibootmgr`; nếu chưa, chạy một lần từ terminal để nhập mật khẩu.
 
@@ -138,12 +146,12 @@ sudo ./reboot-to-windows.sh     # hoặc ~/.local/bin/reboot-to-windows sau khi 
 
 ## Windows — cài đặt
 
-Chép thư mục `windows/` ra chỗ tiện, rồi:
+Chép thư mục `windows/` ra chỗ tiện. Trong đó có hai launcher:
 
-* nhấp đúp **`Reboot to Linux.cmd`**, hoặc
-* chuột phải **`reboot-to-linux.ps1`** → *Run with PowerShell*.
+* **`Reboot to Linux.cmd`** — khởi động lại vào Linux
+* **`Reboot to Windows.cmd`** — restart về lại Windows
 
-Nó tự nâng quyền, tìm mục firmware Ubuntu, hỏi xác nhận, rồi khởi động lại vào Linux. Muốn ghim: chuột phải `Reboot to Linux.cmd` → *Create shortcut* → kéo ra Desktop hoặc Start.
+Nhấp đúp một cái (nó tự nâng quyền, hỏi xác nhận, rồi reboot), hoặc chuột phải `.ps1` tương ứng → *Run with PowerShell*. Muốn ghim: chuột phải `.cmd` → *Create shortcut* → kéo ra Desktop hoặc Start.
 
 ## Lưu ý an toàn
 
