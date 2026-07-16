@@ -1,8 +1,8 @@
 #Requires -Version 5
 <#
-    install-autoregister — create a startup scheduled task that re-asserts the
-    Windows Boot Manager in the UEFI firmware boot menu at every Windows boot.
-    For flaky boards that drop/hide the Windows entry after a Windows boot.
+    install-autoregister (Windows) — install a startup scheduled task that keeps
+    the UEFI firmware boot menu reduced to two entries (one Linux loader +
+    Windows Boot Manager), mirroring the Linux ensure-windows-entry service.
     Self-elevates to Administrator.
 #>
 
@@ -16,10 +16,16 @@ if (-not $isAdmin) {
     return
 }
 
-$taskName = 'Register Windows Boot Manager'
+$taskName = 'Ensure Boot Menu'
+$destDir  = Join-Path $env:ProgramData 'boot-switcher'
+$destPs1  = Join-Path $destDir 'ensure-boot-menu.ps1'
 
-$action    = New-ScheduledTaskAction -Execute 'bcdedit.exe' `
-                -Argument '/set {fwbootmgr} displayorder {bootmgr} /addlast'
+# Copy the worker script to a stable location (survives moving the repo folder).
+New-Item -ItemType Directory -Force -Path $destDir | Out-Null
+Copy-Item -Force -Path (Join-Path $PSScriptRoot 'ensure-boot-menu.ps1') -Destination $destPs1
+
+$action    = New-ScheduledTaskAction -Execute 'powershell.exe' `
+                -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$destPs1`""
 $trigger   = New-ScheduledTaskTrigger -AtStartup
 $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' `
                 -LogonType ServiceAccount -RunLevel Highest
@@ -27,12 +33,14 @@ $settings  = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries `
                 -DontStopIfGoingOnBatteries -StartWhenAvailable
 
 Register-ScheduledTask -TaskName $taskName -Force `
-    -Description 'Re-assert Windows Boot Manager in the UEFI boot menu at startup (flaky-firmware helper). https://github.com/windystrife/boot-switcher' `
+    -Description 'Reduce the UEFI boot menu to Linux + Windows at startup (flaky-firmware helper). https://github.com/windystrife/boot-switcher' `
     -Action $action -Trigger $trigger -Principal $principal -Settings $settings | Out-Null
 
-Write-Host "Created startup task '$taskName' (runs bcdedit at each boot)." -ForegroundColor Green
+Write-Host "Created startup task '$taskName' -> $destPs1" -ForegroundColor Green
 Write-Host "Running it once now..."
-& bcdedit /set "{fwbootmgr}" displayorder "{bootmgr}" /addlast
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$destPs1"
+Write-Host "Firmware boot order now:" -ForegroundColor Cyan
+bcdedit /enum "{fwbootmgr}" | Select-String -Pattern 'displayorder|identifier'
 
 Write-Host "`nUninstall later with:  schtasks /delete /tn `"$taskName`" /f" -ForegroundColor DarkGray
 Read-Host "Press Enter to close"

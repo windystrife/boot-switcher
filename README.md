@@ -77,8 +77,8 @@ Double-click one (it self-elevates, confirms, and reboots), or right-click the m
 
 Some boards (e.g. Huananzhi X99) rewrite the UEFI boot list on every boot and drop/hide the Windows entry, so it vanishes from the BIOS menu. Optional helpers re-assert it automatically:
 
-* **Linux:** `cd linux && ./install-autoregister.sh` — installs a systemd service (`ensure-windows-entry.service`) that, on every boot, recreates a fresh **Windows Boot Manager** UEFI entry pointing at the Windows ESP and keeps Linux first / Windows second. The Windows ESP is auto-detected (the partition holding `\EFI\Microsoft\Boot\bootmgfw.efi`), so it's machine-independent.
-* **Windows:** run `windows\install-autoregister.ps1` (as admin) — creates a startup scheduled task that runs `bcdedit /set {fwbootmgr} displayorder {bootmgr} /addlast`, re-adding Windows Boot Manager to the firmware boot menu at each boot (added last, so it never becomes the default).
+* **Linux:** `cd linux && ./install-autoregister.sh` — installs a systemd service (`ensure-windows-entry.service`) that, on every boot, recreates a fresh **Windows Boot Manager** UEFI entry pointing at the Windows ESP, then **prunes the boot menu to exactly two entries** (the Linux loader you booted + Windows). The Windows ESP is auto-detected (the partition holding `\EFI\Microsoft\Boot\bootmgfw.efi`), so it's machine-independent.
+* **Windows:** run `windows\install-autoregister.ps1` (as admin) — creates a startup scheduled task (`ensure-boot-menu.ps1`) that does the mirror on Windows: on each boot it **reduces the firmware boot menu to one Linux loader + Windows Boot Manager**, deleting the duplicate Linux entries and putting Linux first / Windows second.
 
 Install both so the entry gets refreshed no matter which OS you boot. Windows still boots independently from its own drive — these only touch UEFI boot variables.
 
@@ -166,8 +166,8 @@ Nhấp đúp một cái (nó tự nâng quyền, hỏi xác nhận, rồi reboot
 
 Một số main (vd Huananzhi X99) tự viết lại danh sách boot UEFI mỗi lần khởi động, làm rớt/giấu entry Windows → BIOS không thấy nữa. Có 2 helper tự đăng ký lại:
 
-* **Linux:** `cd linux && ./install-autoregister.sh` — cài systemd service (`ensure-windows-entry.service`), mỗi lần boot tự tạo lại entry **Windows Boot Manager** tươi mới trỏ vào ESP Windows, giữ Linux đầu / Windows thứ 2. ESP Windows được tự dò (phân vùng chứa `\EFI\Microsoft\Boot\bootmgfw.efi`) nên chạy mọi máy.
-* **Windows:** chạy `windows\install-autoregister.ps1` (quyền admin) — tạo scheduled task lúc khởi động, chạy `bcdedit /set {fwbootmgr} displayorder {bootmgr} /addlast`, đưa Windows Boot Manager vào menu boot firmware mỗi lần bật (thêm ở cuối nên không thành mặc định).
+* **Linux:** `cd linux && ./install-autoregister.sh` — cài systemd service (`ensure-windows-entry.service`), mỗi lần boot tự tạo lại entry **Windows Boot Manager** tươi mới trỏ vào ESP Windows, rồi **dọn menu boot còn đúng 2 entry** (entry Linux đang boot + Windows). ESP Windows được tự dò (phân vùng chứa `\EFI\Microsoft\Boot\bootmgfw.efi`) nên chạy mọi máy.
+* **Windows:** chạy `windows\install-autoregister.ps1` (quyền admin) — tạo scheduled task (`ensure-boot-menu.ps1`) làm y hệt bên Windows: mỗi lần boot **dọn menu firmware còn 1 entry Linux + Windows Boot Manager**, xoá các entry Linux trùng, đặt Linux đầu / Windows sau.
 
 Cài cả 2 để dù boot OS nào entry cũng được làm mới. Windows vẫn boot độc lập từ ổ của nó — mấy cái này chỉ đụng biến boot UEFI.
 
