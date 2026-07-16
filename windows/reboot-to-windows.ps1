@@ -2,13 +2,14 @@
 <#
     reboot-to-windows — restart this PC back into Windows (the OS you are in now).
 
-    Auto-detects the Windows Boot Manager UEFI firmware entry, sets a one-time
-    boot into it via bcdedit {fwbootmgr}, and reboots. Useful when the machine's
-    default boot order points at another OS but you want to stay on Windows.
-    The permanent boot order is left unchanged.
+    Sets a one-time boot into the Windows Boot Manager via bcdedit {fwbootmgr}
+    and reboots. Windows Boot Manager's firmware identifier is the well-known
+    {bootmgr}, so no fragile parsing is needed. The permanent boot order is
+    left unchanged.
 
-    Optional: pass a substring to force which firmware entry to use, e.g.
-        powershell -File reboot-to-windows.ps1 -Match "{a1b2c3d4-...}"
+    Optional: pass a specific firmware entry to force it, e.g.
+        powershell -File reboot-to-windows.ps1 -Match "{bootmgr}"
+        powershell -File reboot-to-windows.ps1 -Match "Windows"
 #>
 param([string]$Match)
 
@@ -24,48 +25,53 @@ if (-not $isAdmin) {
     return
 }
 
-# --- find the Windows Boot Manager firmware entry ------------------------
-$blocks = (bcdedit /enum firmware | Out-String) -split "(\r?\n){2,}"
+$fw = bcdedit /enum firmware | Out-String
 
+# --- pick the target firmware entry --------------------------------------
 $targetId = $null
-$candidates = @()
 
-foreach ($block in $blocks) {
-    if ($block -notmatch '(?im)^\s*identifier\s+(\{[0-9A-Fa-f-]+\})') { continue }
-    $id = $Matches[1]
-
-    $desc = ''
-    if ($block -match '(?im)^\s*description\s+(.+?)\s*$') { $desc = $Matches[1] }
-
-    if ($Match) {
-        if ($desc -like "*$Match*" -or $id -like "*$Match*") { $targetId = $id; break }
-        continue
+if ($Match) {
+    # If a whole {id} was given, use it as-is; otherwise search by name/id.
+    if ($Match -match '^\{.+\}$') {
+        $targetId = $Match
     }
-
-    if ($id -match '(?i)fwbootmgr') { continue }
-
-    # Windows by name, or by its universal BOOTMGFW.EFI loader path.
-    if ($desc -match '(?i)windows boot manager' -or $block -match '(?i)\\EFI\\.*bootmgfw\.efi') {
-        $candidates += [pscustomobject]@{ Id = $id; Desc = $desc; HasPath = ($block -match '(?i)bootmgfw\.efi') }
+    else {
+        foreach ($block in ($fw -split "\r?\n\r?\n")) {
+            if ($block -match '(?im)^\s*identifier\s+(\{[^}]+\})') {
+                $id = $Matches[1]
+                $desc = if ($block -match '(?im)^\s*description\s+(.+?)\s*$') { $Matches[1] } else { '' }
+                if ($desc -like "*$Match*" -or $id -like "*$Match*") { $targetId = $id; break }
+            }
+        }
     }
 }
-
-# Prefer a candidate that carries a real BOOTMGFW path over a bare name entry.
-if (-not $targetId -and $candidates.Count -ge 1) {
-    $best = $candidates | Sort-Object -Property @{Expression='HasPath';Descending=$true} | Select-Object -First 1
-    $targetId = $best.Id
+else {
+    # Windows Boot Manager's firmware identifier is the well-known {bootmgr}.
+    if ($fw -match '(?im)^\s*identifier\s+\{bootmgr\}') {
+        $targetId = '{bootmgr}'
+    }
+    else {
+        # Fallback: match by description or the BOOTMGFW.EFI loader path.
+        foreach ($block in ($fw -split "\r?\n\r?\n")) {
+            if ($block -match '(?im)^\s*identifier\s+(\{[^}]+\})') {
+                $id = $Matches[1]
+                if ($id -match '(?i)fwbootmgr') { continue }
+                if ($block -match '(?i)windows boot manager' -or $block -match '(?i)bootmgfw\.efi') {
+                    $targetId = $id; break
+                }
+            }
+        }
+    }
 }
 
 if (-not $targetId) {
-    Write-Host "No Windows Boot Manager entry found in the UEFI firmware boot manager." -ForegroundColor Red
+    Write-Host "Could not find the Windows Boot Manager firmware entry." -ForegroundColor Red
     bcdedit /enum firmware | Select-String -Pattern 'identifier|description'
     Read-Host "Press Enter to close"
     return
 }
 
-$name = ($candidates | Where-Object Id -eq $targetId | Select-Object -First 1).Desc
-if (-not $name) { $name = $targetId }
-Write-Host "Windows firmware entry: $name  $targetId" -ForegroundColor Cyan
+Write-Host "Windows firmware entry: $targetId" -ForegroundColor Cyan
 $answer = Read-Host "Restart now and boot back into Windows? [y/N]"
 if ($answer -notmatch '^[Yy]') { return }
 

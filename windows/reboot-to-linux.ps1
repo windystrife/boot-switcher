@@ -39,7 +39,7 @@ $targetId = $null
 $candidates = @()
 
 foreach ($block in $blocks) {
-    if ($block -notmatch '(?im)^\s*identifier\s+(\{[0-9A-Fa-f-]+\})') { continue }
+    if ($block -notmatch '(?im)^\s*identifier\s+(\{[^}]+\})') { continue }
     $id = $Matches[1]
 
     $desc = ''
