@@ -38,27 +38,28 @@ partnum=$(cat "/sys/class/block/$(basename "$winpart")/partition" 2>/dev/null)
 [ -n "$partnum" ] || { log "cannot read partition number for $winpart"; exit 0; }
 log "Windows ESP: $winpart (disk $disk, part $partnum)"
 
-# 2) Create a fresh entry — a freshly-created entry is what these firmwares re-show.
-efibootmgr -c -d "$disk" -p "$partnum" -L "$LABEL" -l "$LOADER" >/dev/null 2>&1 || {
-    log "efibootmgr -c failed"; exit 0; }
+# 2) Keep a STABLE Windows entry — only create one if none exists. Recreating it
+#    every boot changes its number and seems to make the firmware churn; a stable
+#    entry that we simply move to slot #2 is what actually stays visible in BIOS.
+keep_win=$(efibootmgr -v | grep -i "$LABEL" | grep -i bootmgfw | head -1 | sed -E 's/^Boot([0-9A-Fa-f]{4}).*/\1/')
+if [ -z "$keep_win" ]; then
+    efibootmgr -c -d "$disk" -p "$partnum" -L "$LABEL" -l "$LOADER" >/dev/null 2>&1 || {
+        log "efibootmgr -c failed"; exit 0; }
+    keep_win=$(efibootmgr -v | grep -i "$LABEL" | grep -i bootmgfw | head -1 | sed -E 's/^Boot([0-9A-Fa-f]{4}).*/\1/')
+    log "created Windows entry Boot$keep_win"
+fi
+[ -n "$keep_win" ] || { log "no Windows entry available"; exit 0; }
 
-# 3) Keep the newest Windows entry; delete ONLY older duplicate Windows entries.
-#    (Do NOT delete the Linux entries — mass deletion makes this firmware rebuild
-#    its whole boot list at the next POST and drop the Windows entry. A freshly
-#    created Windows entry, added without deleting the others, is what actually
-#    shows up in the BIOS menu on these Huananzhi boards.)
-mapfile -t wins < <(efibootmgr -v | grep -i "$LABEL" | grep -i bootmgfw | sed -E 's/^Boot([0-9A-Fa-f]{4}).*/\1/')
-[ "${#wins[@]}" -ge 1 ] || { log "no Windows entry after create (?)"; exit 0; }
-keep_win="${wins[-1]}"
-for b in "${wins[@]}"; do
+# 3) Delete only DUPLICATE Windows entries (keep our one). Don't touch Linux.
+for b in $(efibootmgr -v | grep -i "$LABEL" | grep -i bootmgfw | sed -E 's/^Boot([0-9A-Fa-f]{4}).*/\1/'); do
     [ "$b" != "$keep_win" ] && efibootmgr -b "$b" -B >/dev/null 2>&1 || true
 done
 
-# 4) Put the Linux entry we booted from first, the fresh Windows entry second,
-#    and keep all the other entries after them.
+# 4) Move Windows to boot-priority slot #2: Linux (the entry we booted) first,
+#    Windows second, the rest after. This is the part that makes BIOS show it.
 cur=$(efibootmgr | sed -n 's/^BootCurrent: //p')
 rest=$(efibootmgr | sed -n 's/^BootOrder: //p' | tr ',' '\n' | grep -vx "$cur" | grep -vx "$keep_win" | paste -sd,)
 if [ -n "$cur" ]; then
     efibootmgr -o "${cur},${keep_win}${rest:+,$rest}" >/dev/null 2>&1 || true
 fi
-log "refreshed Boot$keep_win ($LABEL); order = $(efibootmgr | sed -n 's/^BootOrder: //p')"
+log "Windows Boot$keep_win at slot #2; order = $(efibootmgr | sed -n 's/^BootOrder: //p')"
